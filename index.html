@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bedah Dompet</title>
+<meta name="description" content="Bedah Dompet, budget planner keluarga. Data tersimpan di Google Drive Anda sendiri.">
+<meta name="theme-color" content="#F4F7F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B1314" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bedah Dompet">
+<style>
+  /* Halaman pembungkus: membuka aplikasi Bedah Dompet (Apps Script) memenuhi seluruh jendela.
+     Saat dipasang di laptop, bilah judul jendela disembunyikan (Window Controls Overlay);
+     yang tersisa hanya tombol perkecil/tutup milik sistem dan pita tipis untuk menggeser jendela. */
+  :root { --bg: #F4F7F7; --fg: #202D30; --muted: #576A69; --acc: #237D80; --on-acc: #FFFFFF; --line: #D5E0E0; --surface: #FFFFFF; color-scheme: light; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0B1314; --fg: #E3ECEC; --muted: #93A6A6; --acc: #4FB7BA; --on-acc: #061112; --line: #273536; --surface: #131E1F; color-scheme: dark; }
+  }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .bilah {
+    position: fixed; left: env(titlebar-area-x, 0); top: env(titlebar-area-y, 0);
+    width: env(titlebar-area-width, 100%); height: env(titlebar-area-height, 0px);
+    display: flex; align-items: center; gap: 8px; padding-left: 12px; box-sizing: border-box; overflow: hidden;
+    -webkit-app-region: drag; app-region: drag; font-size: 12.5px; font-weight: 600; color: var(--muted); user-select: none;
+  }
+  .bilah img { width: 16px; height: 16px; }
+  #app {
+    position: fixed; left: 0; right: 0; bottom: 0; top: env(titlebar-area-height, 0px);
+    width: 100%; height: calc(100% - env(titlebar-area-height, 0px)); border: 0; display: block; background: var(--bg);
+  }
+  .layar { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; padding: 24px; background: var(--bg); box-sizing: border-box; }
+  .layar[hidden] { display: none; }
+  .kartu { max-width: 440px; text-align: center; display: grid; gap: 14px; justify-items: center; }
+  .kartu img { width: 96px; height: 96px; border-radius: 24px; }
+  .kartu h1 { margin: 0; font-size: 21px; }
+  .kartu p { margin: 0; color: var(--muted); }
+  .muat img { animation: denyut 1.2s ease-in-out infinite; }
+  @keyframes denyut { 50% { transform: scale(.92); opacity: .7; } }
+  @media (prefers-reduced-motion: reduce) { .muat img { animation: none; } }
+  .tombol { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .btn { height: 46px; padding: 0 18px; border-radius: 14px; border: 0; font: 700 15px system-ui, sans-serif; cursor: pointer; display: inline-flex; align-items: center; text-decoration: none; }
+  .btn.utama { background: var(--acc); color: var(--on-acc); }
+  .btn.kedua { background: var(--surface); color: var(--fg); box-shadow: inset 0 0 0 1px var(--line); }
+  ol { text-align: left; margin: 0; padding-left: 20px; color: var(--muted); display: grid; gap: 6px; }
+</style>
+</head>
+<body>
+<div class="bilah" aria-hidden="true"><img src="favicon-32.png" alt="">Bedah Dompet</div>
+<iframe id="app" title="Bedah Dompet" allow="clipboard-write; camera" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+
+<div class="layar muat" id="muat"><div class="kartu"><img src="icon-192.png" alt=""><p>Membuka Bedah Dompet…</p></div></div>
+
+<div class="layar" id="bantu" hidden><div class="kartu">
+  <img src="icon-192.png" alt="">
+  <h1>Bedah Dompet belum terbuka</h1>
+  <p>Biasanya karena ini pertama kali dibuka di perangkat ini. Google perlu memastikan akun Anda di jendela browser biasa.</p>
+  <ol>
+    <li>Tekan <b>Buka di browser</b>, masuk dengan akun Google Anda, lalu izinkan aplikasi bila diminta.</li>
+    <li>Setelah layar PIN Bedah Dompet muncul di browser, kembali ke jendela ini dan tekan <b>Coba lagi</b>.</li>
+  </ol>
+  <div class="tombol"><a class="btn utama" id="keBrowser" target="_blank" rel="noopener">Buka di browser</a><button class="btn kedua" type="button" id="ulang">Coba lagi</button></div>
+</div></div>
+
+<div class="layar" id="offline" hidden><div class="kartu">
+  <img src="icon-192.png" alt="">
+  <h1>Tidak ada koneksi internet</h1>
+  <p>Bedah Dompet menyimpan data di Google Drive, jadi perlu internet. Sambungkan lagi, lalu coba buka ulang.</p>
+  <div class="tombol"><button class="btn utama" type="button" id="ulang2">Coba lagi</button></div>
+</div></div>
+
+<div class="layar" id="atur" hidden><div class="kartu">
+  <img src="icon-192.png" alt="">
+  <h1>Alamat aplikasi belum diisi</h1>
+  <p>Penjual: isi ALAMAT_APLIKASI di file index.html dengan URL aplikasi web yang berakhiran /exec.</p>
+</div></div>
+
+<script>
+(function () {
+  'use strict';
+  /* GANTI dengan URL aplikasi pusat Bedah Dompet (Apps Script › Terapkan › Kelola deployment), berakhiran /exec */
+  var ALAMAT_APLIKASI = 'https://script.google.com/macros/s/AKfycbzP_rPz4Ee7EOy59AInqZtGX90TUg08ydSfculIrfEHQgZji_ttV-Lp63VG_Zqs0MsdeA/exec';
+
+  var pola = /^https:\/\/script\.google\.com\/(a\/[\w.-]+\/)?macros\/s\/[\w-]+\/exec$/;
+  var $ = function (id) { return document.getElementById(id); };
+  var app = $('app'), siap = false, tunda = null;
+
+  function tampil(id) { ['muat', 'bantu', 'offline', 'atur'].forEach(function (x) { $(x).hidden = x !== id; }); }
+
+  function buka() {
+    siap = false;
+    clearTimeout(tunda);
+    if (!pola.test(ALAMAT_APLIKASI)) { tampil('atur'); return; }
+    if (navigator.onLine === false) { tampil('offline'); return; }
+    tampil('muat');
+    var src = ALAMAT_APLIKASI + '?wadah=' + encodeURIComponent(location.origin);
+    app.src = 'about:blank';
+    setTimeout(function () { app.src = src; }, 30);
+    /* Bila aplikasi tidak memberi tanda siap, kemungkinan Google meminta masuk atau izin (tidak bisa di dalam jendela ini) */
+    tunda = setTimeout(function () { if (!siap) tampil('bantu'); }, 20000);
+  }
+
+  window.addEventListener('message', function (e) {
+    if (!e.data || e.data.bd !== 'siap') return;
+    if (!/^https:\/\/([a-z0-9-]+\.)*(google\.com|googleusercontent\.com)$/.test(e.origin)) return;
+    siap = true;
+    clearTimeout(tunda);
+    tampil('');
+  });
+  window.addEventListener('offline', function () { if (!siap) tampil('offline'); });
+  window.addEventListener('online', function () { if (!siap) buka(); });
+  $('keBrowser').href = pola.test(ALAMAT_APLIKASI) ? ALAMAT_APLIKASI : '#';
+  $('ulang').addEventListener('click', buka);
+  $('ulang2').addEventListener('click', buka);
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () { /* tetap jalan tanpa cache */ }); });
+  }
+  buka();
+})();
+</script>
+</body>
+</html>
