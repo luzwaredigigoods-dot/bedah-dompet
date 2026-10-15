@@ -110,27 +110,17 @@
   <div class="salin"><input id="linkIni" readonly aria-label="Link Bedah Dompet"><button class="btn kedua kecil" type="button" id="salinLink">Salin link</button></div>
 </div></div>
 
-<!-- iPhone/iPad langkah 1: login Google di browser -->
-<div class="layar" id="appleLogin" hidden><div class="kartu">
-  <img src="apple-touch-icon.png" alt="">
-  <p class="tahap">Langkah 1 dari 2</p>
-  <h1>Masuk dengan akun Google</h1>
-  <p>Masuk dulu dengan akun Google yang akan dipakai untuk Bedah Dompet. Data keuangan Anda disimpan di Google Drive akun ini.</p>
-  <div class="tombol tegak"><a class="btn utama" id="tombolLogin">Masuk dengan Google</a></div>
-  <p class="catatan">Bila Google menampilkan daftar izin, centang semua kotak lalu tekan Lanjutkan.</p>
-</div></div>
-
-<!-- iPhone/iPad langkah 2: tambah ke layar utama -->
+<!-- iPad: tambah ke layar utama -->
 <div class="layar" id="applePasang" hidden><div class="kartu">
   <img src="apple-touch-icon.png" alt="">
-  <p class="tahap">Langkah 2 dari 2</p>
-  <h1>Pasang di layar utama</h1>
+  <h1>Pasang Bedah Dompet di layar utama</h1>
+  <p>Bedah Dompet dipakai seperti aplikasi: pasang dulu, lalu buka dari ikonnya.</p>
   <ol class="langkah">
     <li>Ketuk tombol <b>Bagikan</b> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M5 11v9h14v-9"/></svg> di bilah atas Safari atau Chrome.</li>
     <li>Pilih <b>Tambah ke Layar Utama</b>, lalu ketuk <b>Tambah</b>.</li>
     <li>Buka Bedah Dompet dari ikon yang baru muncul di layar utama.</li>
   </ol>
-  <p class="catatan">Saat pertama dibuka dari ikon, Google mungkin meminta Anda masuk sekali lagi. <button class="tautan" type="button" id="ulangLogin">Ulangi langkah 1</button></p>
+  <p class="catatan">Saat pertama dibuka dari ikon, Google akan meminta Anda masuk dengan akun Google.</p>
 </div></div>
 
 <div class="layar" id="atur" hidden><div class="kartu">
@@ -160,16 +150,13 @@
   var dalamAplikasiLain = /FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|Snapchat|TikTok|musical_ly|; wv\)/.test(ua) || (iOS && !/Safari\//.test(ua));
   var safariMac = !iOS && /Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome\/|Chromium\/|Edg\/|OPR\//.test(ua);
   var firefox = /Firefox\/|FxiOS/.test(ua);
-  var LAYAR = ['muat', 'offline', 'atur', 'pasang', 'sudahPasang', 'pindahBrowser', 'appleLogin', 'applePasang'];
+  var LAYAR = ['muat', 'offline', 'atur', 'pasang', 'sudahPasang', 'pindahBrowser', 'applePasang'];
   var LINK_INI = location.origin + location.pathname;
-  var KUNCI_LOGIN = 'bd-apple-login';
 
   function terpasang() {
     try { if (navigator.standalone === true) return true; } catch (e) { /* abaikan */ }
     return !!(window.matchMedia && ['standalone', 'window-controls-overlay', 'minimal-ui', 'fullscreen'].some(function (m) { return matchMedia('(display-mode: ' + m + ')').matches; }));
   }
-  function simpan(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) { /* abaikan */ } }
-  function ambil(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
 
   function tampil(id) { LAYAR.forEach(function (x) { $(x).hidden = x !== id; }); $('bantu').hidden = true; }
 
@@ -242,13 +229,7 @@
         keHalamanGoogle(ALAMAT_APLIKASI + '?siapkan=iphone');
         return;
       }
-      if (iOS) {
-        if (/#login-ok/.test(location.hash)) { simpan(KUNCI_LOGIN, '1'); try { history.replaceState(null, '', LINK_INI); } catch (e) { /* abaikan */ } }
-        if (ambil(KUNCI_LOGIN)) { tampil('applePasang'); return; }
-        $('tombolLogin').href = ALAMAT_APLIKASI + '?siapkan=apple&kembali=' + encodeURIComponent(LINK_INI);
-        tampil('appleLogin');
-        return;
-      }
+      if (iOS) { tampil('applePasang'); return; }
       if (safariMac || firefox) { layarPindah(); return; }
       layarPasang();
       return;
@@ -260,7 +241,7 @@
       return;
     }
     tampil('muat');
-    var src = ALAMAT_APLIKASI + '?wadah=' + encodeURIComponent(location.origin);
+    var src = ALAMAT_APLIKASI + '?wadah=' + encodeURIComponent(location.origin) + '&asal=' + encodeURIComponent(LINK_INI);
     app.src = 'about:blank';
     setTimeout(function () { app.src = src; }, 30);
     /* Bila aplikasi tidak memberi tanda siap, kemungkinan Google meminta masuk atau izin (tidak bisa di dalam jendela ini) */
@@ -284,7 +265,6 @@
     tawaranPasang.prompt();
     tawaranPasang.userChoice.then(function (r) { if (r && r.outcome !== 'accepted') caraManual(); }).catch(function () { /* abaikan */ });
   });
-  $('ulangLogin').addEventListener('click', function () { simpan(KUNCI_LOGIN, ''); buka(); });
   $('salinLink').addEventListener('click', function () {
     var inp = $('linkIni'), b = $('salinLink');
     var ok = function () { b.textContent = 'Tersalin'; setTimeout(function () { b.textContent = 'Salin link'; }, 2000); };
