@@ -126,7 +126,7 @@
   <p class="tahap">Langkah 2 dari 2</p>
   <h1>Pasang di layar utama</h1>
   <ol class="langkah">
-    <li>Ketuk tombol <b>Bagikan</b> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M5 11v9h14v-9"/></svg> (Safari: di bawah layar; Chrome: di kanan atas).</li>
+    <li>Ketuk tombol <b>Bagikan</b> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M5 11v9h14v-9"/></svg> di bilah atas Safari atau Chrome.</li>
     <li>Pilih <b>Tambah ke Layar Utama</b>, lalu ketuk <b>Tambah</b>.</li>
     <li>Buka Bedah Dompet dari ikon yang baru muncul di layar utama.</li>
   </ol>
@@ -155,6 +155,7 @@
      - Aplikasi di dalam WhatsApp/Instagram/Facebook tidak bisa memasang ikon. */
   var ua = navigator.userAgent || '';
   var iOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  var iPhone = /iPhone|iPod/.test(ua);
   var android = /Android/.test(ua);
   var dalamAplikasiLain = /FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|Snapchat|TikTok|musical_ly|; wv\)/.test(ua) || (iOS && !/Safari\//.test(ua));
   var safariMac = !iOS && /Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome\/|Chromium\/|Edg\/|OPR\//.test(ua);
@@ -216,6 +217,16 @@
     tampil('pindahBrowser');
   }
 
+  function keHalamanGoogle(url) {
+    tampil('muat');
+    /* Tunggu logo selesai dimuat dulu: begitu pindah halaman, Safari menghentikan gambar yang belum selesai
+       sehingga logo tampil sebagai kotak tanda tanya selama halaman Google dimuat. */
+    var logo = $('logoMuat'), pergi = false;
+    var lanjut = function () { if (pergi) return; pergi = true; location.replace(url); };
+    if (logo.complete && logo.naturalWidth) setTimeout(lanjut, 150);
+    else { logo.addEventListener('load', function () { setTimeout(lanjut, 150); }); logo.addEventListener('error', lanjut); setTimeout(lanjut, 2500); }
+  }
+
   function buka() {
     siap = false;
     clearTimeout(tunda);
@@ -225,6 +236,12 @@
     if (!terpasang()) {
       /* Dibuka di tab browser: pasang dulu */
       if (dalamAplikasiLain) { layarPindah(); return; }
+      if (iPhone) {
+        /* iPhone: Bedah Dompet dipasang langsung dari halaman Google (/exec) agar terbuka layar penuh dari ikonnya.
+           Login dan petunjuk Tambah ke Layar Utama ditampilkan di sana. */
+        keHalamanGoogle(ALAMAT_APLIKASI + '?siapkan=iphone');
+        return;
+      }
       if (iOS) {
         if (/#login-ok/.test(location.hash)) { simpan(KUNCI_LOGIN, '1'); try { history.replaceState(null, '', LINK_INI); } catch (e) { /* abaikan */ } }
         if (ambil(KUNCI_LOGIN)) { tampil('applePasang'); return; }
@@ -238,14 +255,8 @@
     }
 
     if (iOS || safariMac || firefox) {
-      /* Dibuka dari ikon di iPhone/iPad: Bedah Dompet dibuka langsung di halaman Google */
-      tampil('muat');
-      /* Tunggu logo selesai dimuat dulu: begitu pindah halaman, Safari menghentikan gambar yang belum selesai
-         sehingga logo tampil sebagai kotak tanda tanya selama halaman Google dimuat. */
-      var logo = $('logoMuat'), pergi = false;
-      var lanjut = function () { if (pergi) return; pergi = true; location.replace(ALAMAT_APLIKASI); };
-      if (logo.complete && logo.naturalWidth) setTimeout(lanjut, 150);
-      else { logo.addEventListener('load', function () { setTimeout(lanjut, 150); }); logo.addEventListener('error', lanjut); setTimeout(lanjut, 2500); }
+      /* Dibuka dari ikon di iPad (atau ikon lama di iPhone): Bedah Dompet dibuka langsung di halaman Google */
+      keHalamanGoogle(ALAMAT_APLIKASI);
       return;
     }
     tampil('muat');
