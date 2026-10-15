@@ -1,6 +1,6 @@
 /* Menyimpan halaman pembungkus dan ikon agar aplikasi terpasang cepat terbuka.
    Data keuangan tidak pernah disimpan di sini: isinya dibuka langsung dari Google. */
-var CACHE = 'bedah-dompet-pembungkus-v1';
+var CACHE = 'bedah-dompet-pembungkus-v2';
 var FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './favicon-32.png', './favicon.ico'];
 
 self.addEventListener('install', function (e) {

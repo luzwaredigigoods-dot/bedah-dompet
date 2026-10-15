@@ -64,7 +64,7 @@
 <div class="bilah" aria-hidden="true"><img src="favicon-32.png" alt="">Bedah Dompet</div>
 <iframe id="app" title="Bedah Dompet" allow="clipboard-write; camera" referrerpolicy="strict-origin-when-cross-origin"></iframe>
 
-<div class="layar muat" id="muat"><div class="kartu"><img src="icon-192.png" alt=""><p>Membuka Bedah Dompet…</p></div></div>
+<div class="layar muat" id="muat"><div class="kartu"><img id="logoMuat" src="icon-192.png" alt="" onerror="this.style.visibility='hidden'"><p>Membuka Bedah Dompet…</p></div></div>
 
 <div class="pita" id="bantu" hidden role="status">
   <div class="pita-t"><b>Bedah Dompet belum terbuka di jendela ini?</b>
@@ -127,7 +127,12 @@
     if (tanpaBingkai) {
       if (iOS && !terpasang()) { tampil('pasang'); return; }
       tampil('muat');
-      location.replace(ALAMAT_APLIKASI);
+      /* Tunggu logo selesai dimuat dulu: begitu pindah halaman, Safari menghentikan gambar yang belum selesai
+         sehingga logo tampil sebagai kotak tanda tanya selama halaman Google dimuat. */
+      var logo = $('logoMuat'), pergi = false;
+      var lanjut = function () { if (pergi) return; pergi = true; location.replace(ALAMAT_APLIKASI); };
+      if (logo.complete && logo.naturalWidth) setTimeout(lanjut, 150);
+      else { logo.addEventListener('load', function () { setTimeout(lanjut, 150); }); logo.addEventListener('error', lanjut); setTimeout(lanjut, 2500); }
       return;
     }
     tampil('muat');
