@@ -57,6 +57,12 @@
   .langkah svg { width: 18px; height: 18px; vertical-align: -3px; color: var(--acc); }
   .tombol.tegak { flex-direction: column; width: 100%; }
   .tombol.tegak .btn { justify-content: center; }
+  .tahap { margin: 0; font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--acc) !important; }
+  .catatan { font-size: 13.5px; }
+  .tautan { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: var(--acc); cursor: pointer; text-decoration: underline; }
+  .salin { display: flex; gap: 8px; width: 100%; }
+  .salin input { flex: 1; min-width: 0; height: 38px; border-radius: 11px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); padding: 0 10px; font: 13px system-ui, sans-serif; }
+  .btn[hidden] { display: none; }
   .btn.kecil { height: 38px; padding: 0 14px; font-size: 13.5px; border-radius: 11px; }
 </style>
 </head>
@@ -79,16 +85,52 @@
   <div class="tombol"><button class="btn utama" type="button" id="ulang2">Coba lagi</button></div>
 </div></div>
 
+<!-- Android & laptop (Chrome, Edge, Samsung Internet): pasang dulu, baru dipakai dari ikonnya -->
 <div class="layar" id="pasang" hidden><div class="kartu">
   <img src="apple-touch-icon.png" alt="">
-  <h1>Pasang Bedah Dompet di layar utama</h1>
-  <p>Di iPhone dan iPad, Bedah Dompet dibuka dari ikonnya di layar utama.</p>
+  <h1>Pasang Bedah Dompet</h1>
+  <p>Bedah Dompet dipakai seperti aplikasi: pasang dulu, lalu buka dari ikonnya.</p>
+  <div class="tombol tegak"><button class="btn utama" type="button" id="tombolPasang" hidden>Pasang sekarang</button></div>
+  <ol class="langkah" id="caraManual" hidden></ol>
+  <p class="catatan">Sudah terpasang? Tutup halaman ini dan buka Bedah Dompet dari ikonnya.</p>
+</div></div>
+
+<div class="layar" id="sudahPasang" hidden><div class="kartu">
+  <img src="apple-touch-icon.png" alt="">
+  <h1>Bedah Dompet sudah terpasang</h1>
+  <p id="sudahPasangTeks">Buka Bedah Dompet dari ikonnya untuk mulai memakai.</p>
+</div></div>
+
+<!-- Browser yang tidak bisa memasang (aplikasi di dalam WhatsApp/Instagram, Firefox, Safari di Mac) -->
+<div class="layar" id="pindahBrowser" hidden><div class="kartu">
+  <img src="apple-touch-icon.png" alt="">
+  <h1 id="pindahJudul">Buka di Chrome</h1>
+  <p id="pindahTeks"></p>
+  <div class="tombol tegak"><a class="btn utama" id="keChrome" hidden>Buka di Chrome</a></div>
+  <div class="salin"><input id="linkIni" readonly aria-label="Link Bedah Dompet"><button class="btn kedua kecil" type="button" id="salinLink">Salin link</button></div>
+</div></div>
+
+<!-- iPhone/iPad langkah 1: login Google di browser -->
+<div class="layar" id="appleLogin" hidden><div class="kartu">
+  <img src="apple-touch-icon.png" alt="">
+  <p class="tahap">Langkah 1 dari 2</p>
+  <h1>Masuk dengan akun Google</h1>
+  <p>Masuk dulu dengan akun Google yang akan dipakai untuk Bedah Dompet. Data keuangan Anda disimpan di Google Drive akun ini.</p>
+  <div class="tombol tegak"><a class="btn utama" id="tombolLogin">Masuk dengan Google</a></div>
+  <p class="catatan">Bila Google menampilkan daftar izin, centang semua kotak lalu tekan Lanjutkan.</p>
+</div></div>
+
+<!-- iPhone/iPad langkah 2: tambah ke layar utama -->
+<div class="layar" id="applePasang" hidden><div class="kartu">
+  <img src="apple-touch-icon.png" alt="">
+  <p class="tahap">Langkah 2 dari 2</p>
+  <h1>Pasang di layar utama</h1>
   <ol class="langkah">
     <li>Ketuk tombol <b>Bagikan</b> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M5 11v9h14v-9"/></svg> (Safari: di bawah layar; Chrome: di kanan atas).</li>
     <li>Pilih <b>Tambah ke Layar Utama</b>, lalu ketuk <b>Tambah</b>.</li>
     <li>Buka Bedah Dompet dari ikon yang baru muncul di layar utama.</li>
   </ol>
-  <div class="tombol tegak"><a class="btn kedua" id="bukaLangsung">Buka sekarang tanpa memasang</a></div>
+  <p class="catatan">Saat pertama dibuka dari ikon, Google mungkin meminta Anda masuk sekali lagi. <button class="tautan" type="button" id="ulangLogin">Ulangi langkah 1</button></p>
 </div></div>
 
 <div class="layar" id="atur" hidden><div class="kartu">
@@ -107,25 +149,96 @@
   var $ = function (id) { return document.getElementById(id); };
   var app = $('app'), siap = false, tunda = null;
 
-  /* Safari (iPhone, iPad, Mac) dan Firefox memblokir login Google di dalam bingkai halaman lain (Google menampilkan galat 401).
-     Di browser ini Bedah Dompet dibuka langsung di halaman Google; logo tetap ikut karena ikon diambil dari halaman ini. */
+  /* Jenis browser.
+     - Safari (iPhone, iPad, Mac) dan Firefox memblokir login Google di dalam bingkai halaman lain (galat 401),
+       jadi di iPhone/iPad Bedah Dompet dibuka langsung di halaman Google dari ikon layar utama.
+     - Aplikasi di dalam WhatsApp/Instagram/Facebook tidak bisa memasang ikon. */
   var ua = navigator.userAgent || '';
   var iOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-  var tanpaBingkai = iOS || (/Safari\//.test(ua) && !/Chrome\/|Chromium\/|CriOS|EdgA?\/|OPR\//.test(ua)) || /Firefox\/|FxiOS/.test(ua);
+  var android = /Android/.test(ua);
+  var dalamAplikasiLain = /FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|Snapchat|TikTok|musical_ly|; wv\)/.test(ua) || (iOS && !/Safari\//.test(ua));
+  var safariMac = !iOS && /Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome\/|Chromium\/|Edg\/|OPR\//.test(ua);
+  var firefox = /Firefox\/|FxiOS/.test(ua);
+  var LAYAR = ['muat', 'offline', 'atur', 'pasang', 'sudahPasang', 'pindahBrowser', 'appleLogin', 'applePasang'];
+  var LINK_INI = location.origin + location.pathname;
+  var KUNCI_LOGIN = 'bd-apple-login';
+
   function terpasang() {
     try { if (navigator.standalone === true) return true; } catch (e) { /* abaikan */ }
-    return !!(window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: window-controls-overlay)').matches || matchMedia('(display-mode: minimal-ui)').matches));
+    return !!(window.matchMedia && ['standalone', 'window-controls-overlay', 'minimal-ui', 'fullscreen'].some(function (m) { return matchMedia('(display-mode: ' + m + ')').matches; }));
   }
+  function simpan(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) { /* abaikan */ } }
+  function ambil(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
 
-  function tampil(id) { ['muat', 'offline', 'atur', 'pasang'].forEach(function (x) { $(x).hidden = x !== id; }); $('bantu').hidden = true; }
+  function tampil(id) { LAYAR.forEach(function (x) { $(x).hidden = x !== id; }); $('bantu').hidden = true; }
+
+  /* Pasang di Android/laptop: tombol memakai jendela pasang bawaan browser bila tersedia */
+  var tawaranPasang = null;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    tawaranPasang = e;
+    $('tombolPasang').hidden = false;
+    $('caraManual').hidden = true;
+  });
+  window.addEventListener('appinstalled', function () {
+    tawaranPasang = null;
+    $('sudahPasangTeks').textContent = android ? 'Buka Bedah Dompet dari ikonnya di layar utama HP untuk mulai memakai.' : 'Bedah Dompet terbuka di jendelanya sendiri. Berikutnya, buka dari ikonnya di desktop atau menu Start.';
+    if (!terpasang()) tampil('sudahPasang');
+  });
+  function caraManual() {
+    var el = $('caraManual');
+    el.innerHTML = android
+      ? '<li>Ketuk menu <b>⋮</b> di kanan atas browser. Bila yang muncul pilihan <b>Buka di Chrome</b>, pilih itu dulu.</li><li>Pilih <b>Instal aplikasi</b> atau <b>Tambahkan ke layar utama</b>, lalu <b>Instal</b>.</li><li>Buka Bedah Dompet dari ikonnya di layar utama.</li>'
+      : '<li>Klik ikon <b>Instal</b> di ujung kanan bilah alamat browser (atau menu <b>⋮</b> › <b>Transmisikan, simpan, dan bagikan</b> › <b>Instal halaman sebagai aplikasi</b>).</li><li>Klik <b>Instal</b>. Bedah Dompet terbuka di jendelanya sendiri.</li><li>Berikutnya, buka Bedah Dompet dari ikonnya di desktop.</li>';
+    el.hidden = false;
+  }
+  function layarPasang() {
+    tampil('pasang');
+    if (tawaranPasang) { $('tombolPasang').hidden = false; return; }
+    /* Bila browser tidak menawarkan jendela pasang (misalnya sudah terpasang), tampilkan langkah manual */
+    setTimeout(function () { if (!tawaranPasang) caraManual(); }, 2500);
+  }
+  function layarPindah() {
+    $('linkIni').value = LINK_INI;
+    if (iOS) {
+      $('pindahJudul').textContent = 'Buka di Safari';
+      $('pindahTeks').textContent = 'Halaman ini terbuka di dalam aplikasi lain, jadi Bedah Dompet belum bisa dipasang. Ketuk menu (••• atau ikon kompas) lalu pilih Buka di Safari, atau salin link di bawah dan tempel di Safari.';
+    } else if (android) {
+      $('pindahJudul').textContent = 'Buka di Chrome';
+      $('pindahTeks').textContent = firefox ? 'Bedah Dompet dipasang lewat Chrome. Ketuk tombol di bawah, atau salin link dan buka di Chrome.' : 'Halaman ini terbuka di dalam aplikasi lain, jadi Bedah Dompet belum bisa dipasang. Ketuk tombol di bawah, atau salin link dan buka di Chrome.';
+      var k = $('keChrome');
+      k.href = 'intent://' + location.host + location.pathname + '#Intent;scheme=https;package=com.android.chrome;end';
+      k.hidden = false;
+    } else {
+      $('pindahJudul').textContent = 'Buka di Chrome atau Edge';
+      $('pindahTeks').textContent = 'Di laptop, Bedah Dompet dipasang lewat Google Chrome atau Microsoft Edge. Salin link di bawah, lalu buka di salah satu browser itu.';
+    }
+    tampil('pindahBrowser');
+  }
 
   function buka() {
     siap = false;
     clearTimeout(tunda);
     if (!pola.test(ALAMAT_APLIKASI)) { tampil('atur'); return; }
     if (navigator.onLine === false) { tampil('offline'); return; }
-    if (tanpaBingkai) {
-      if (iOS && !terpasang()) { tampil('pasang'); return; }
+
+    if (!terpasang()) {
+      /* Dibuka di tab browser: pasang dulu */
+      if (dalamAplikasiLain) { layarPindah(); return; }
+      if (iOS) {
+        if (/#login-ok/.test(location.hash)) { simpan(KUNCI_LOGIN, '1'); try { history.replaceState(null, '', LINK_INI); } catch (e) { /* abaikan */ } }
+        if (ambil(KUNCI_LOGIN)) { tampil('applePasang'); return; }
+        $('tombolLogin').href = ALAMAT_APLIKASI + '?siapkan=apple&kembali=' + encodeURIComponent(LINK_INI);
+        tampil('appleLogin');
+        return;
+      }
+      if (safariMac || firefox) { layarPindah(); return; }
+      layarPasang();
+      return;
+    }
+
+    if (iOS || safariMac || firefox) {
+      /* Dibuka dari ikon di iPhone/iPad: Bedah Dompet dibuka langsung di halaman Google */
       tampil('muat');
       /* Tunggu logo selesai dimuat dulu: begitu pindah halaman, Safari menghentikan gambar yang belum selesai
          sehingga logo tampil sebagai kotak tanda tanya selama halaman Google dimuat. */
@@ -155,7 +268,18 @@
   window.addEventListener('offline', function () { if (!siap) tampil('offline'); });
   window.addEventListener('online', function () { if (!siap) buka(); });
   $('keBrowser').href = pola.test(ALAMAT_APLIKASI) ? ALAMAT_APLIKASI : '#';
-  $('bukaLangsung').href = pola.test(ALAMAT_APLIKASI) ? ALAMAT_APLIKASI : '#';
+  $('tombolPasang').addEventListener('click', function () {
+    if (!tawaranPasang) { caraManual(); return; }
+    tawaranPasang.prompt();
+    tawaranPasang.userChoice.then(function (r) { if (r && r.outcome !== 'accepted') caraManual(); }).catch(function () { /* abaikan */ });
+  });
+  $('ulangLogin').addEventListener('click', function () { simpan(KUNCI_LOGIN, ''); buka(); });
+  $('salinLink').addEventListener('click', function () {
+    var inp = $('linkIni'), b = $('salinLink');
+    var ok = function () { b.textContent = 'Tersalin'; setTimeout(function () { b.textContent = 'Salin link'; }, 2000); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(LINK_INI).then(ok, function () { inp.select(); });
+    else { inp.select(); try { document.execCommand('copy'); ok(); } catch (e) { /* abaikan */ } }
+  });
   $('ulang').addEventListener('click', buka);
   $('tutupPita').addEventListener('click', function () { $('bantu').hidden = true; });
   $('ulang2').addEventListener('click', buka);
