@@ -110,6 +110,23 @@
   <div class="salin"><input id="linkIni" readonly aria-label="Link Bedah Dompet"><button class="btn kedua kecil" type="button" id="salinLink">Salin link</button></div>
 </div></div>
 
+<!-- iPhone: pasang ikon lewat profil (Web Clip), agar ikon berlogo dan terbuka layar penuh -->
+<div class="layar" id="iphonePasang" hidden><div class="kartu">
+  <img src="apple-touch-icon.png" alt="">
+  <h1>Pasang Bedah Dompet di iPhone</h1>
+  <p>Bedah Dompet dipakai seperti aplikasi: pasang ikonnya dulu, lalu buka dari layar utama.</p>
+  <div class="tombol tegak"><a class="btn utama" id="unduhProfil" href="bedah-dompet.mobileconfig">Pasang ikon Bedah Dompet</a></div>
+  <ol class="langkah">
+    <li>Ketuk tombol di atas, lalu pilih <b>Izinkan</b> dan <b>Tutup</b>.</li>
+    <li>Buka <b>Pengaturan</b>, ketuk <b>Profil Telah Diunduh</b> di bagian atas, lalu <b>Pasang</b> dan masukkan kode sandi iPhone.</li>
+    <li>Tulisan <b>Tidak Ditandatangani</b> itu wajar. Ketuk <b>Pasang</b> sekali lagi, lalu <b>Selesai</b>.</li>
+    <li>Buka Bedah Dompet dari ikon yang baru muncul di layar utama. Pertama kali, Google akan meminta Anda masuk.</li>
+  </ol>
+  <p class="catatan">Profil ini hanya berisi ikon dan alamat Bedah Dompet, tidak mengubah pengaturan lain. Bisa dihapus kapan saja di Pengaturan › Umum › VPN & Manajemen Perangkat.</p>
+  <p class="catatan">Tidak menemukan Profil Telah Diunduh? Cari di Pengaturan › Umum › VPN & Manajemen Perangkat.</p>
+  <p class="catatan"><button class="tautan" type="button" id="caraLama">Pakai cara lain tanpa profil</button> (ikon tanpa logo)</p>
+</div></div>
+
 <!-- iPad: tambah ke layar utama -->
 <div class="layar" id="applePasang" hidden><div class="kartu">
   <img src="apple-touch-icon.png" alt="">
@@ -150,7 +167,7 @@
   var dalamAplikasiLain = /FBAN|FBAV|FB_IAB|Instagram|Line\/|WhatsApp|Snapchat|TikTok|musical_ly|; wv\)/.test(ua) || (iOS && !/Safari\//.test(ua));
   var safariMac = !iOS && /Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome\/|Chromium\/|Edg\/|OPR\//.test(ua);
   var firefox = /Firefox\/|FxiOS/.test(ua);
-  var LAYAR = ['muat', 'offline', 'atur', 'pasang', 'sudahPasang', 'pindahBrowser', 'applePasang'];
+  var LAYAR = ['muat', 'offline', 'atur', 'pasang', 'sudahPasang', 'pindahBrowser', 'applePasang', 'iphonePasang'];
   var LINK_INI = location.origin + location.pathname;
 
   function terpasang() {
@@ -214,6 +231,17 @@
     else { logo.addEventListener('load', function () { setTimeout(lanjut, 150); }); logo.addEventListener('error', lanjut); setTimeout(lanjut, 2500); }
   }
 
+  /* iPhone: tawarkan profil ikon hanya bila alamat di dalam profil sama dengan ALAMAT_APLIKASI.
+     Bila profil belum diisi atau tidak cocok, pakai cara lama (pasang langsung dari halaman Google). */
+  function layarIphone() {
+    var caraLama = function () { keHalamanGoogle(ALAMAT_APLIKASI + '?siapkan=iphone'); };
+    tampil('muat');
+    fetch('bedah-dompet.mobileconfig', { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (isi) {
+      if (isi.indexOf('<string>' + ALAMAT_APLIKASI + '</string>') < 0) { caraLama(); return; }
+      tampil('iphonePasang');
+    }).catch(caraLama);
+  }
+
   function buka() {
     siap = false;
     clearTimeout(tunda);
@@ -224,9 +252,9 @@
       /* Dibuka di tab browser: pasang dulu */
       if (dalamAplikasiLain) { layarPindah(); return; }
       if (iPhone) {
-        /* iPhone: Bedah Dompet dipasang langsung dari halaman Google (/exec) agar terbuka layar penuh dari ikonnya.
-           Login dan petunjuk Tambah ke Layar Utama ditampilkan di sana. */
-        keHalamanGoogle(ALAMAT_APLIKASI + '?siapkan=iphone');
+        /* iPhone: ikon dipasang lewat profil (Web Clip) yang langsung membuka /exec layar penuh.
+           Cara lama (Tambah ke Layar Utama dari halaman Google, ikon tanpa logo) tetap tersedia sebagai cadangan. */
+        layarIphone();
         return;
       }
       if (iOS) { tampil('applePasang'); return; }
@@ -274,6 +302,7 @@
   $('ulang').addEventListener('click', buka);
   $('tutupPita').addEventListener('click', function () { $('bantu').hidden = true; });
   $('ulang2').addEventListener('click', buka);
+  $('caraLama').addEventListener('click', function () { keHalamanGoogle(ALAMAT_APLIKASI + '?siapkan=iphone'); });
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () { /* tetap jalan tanpa cache */ }); });
